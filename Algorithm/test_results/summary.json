@@ -1,0 +1,12 @@
+{
+  "model": "D:\\backend_plant_disease\\Algorithm\\plant-disease-model-complete.pth",
+  "test_dir": "D:\\backend_plant_disease\\Datasets\\new_plant_disease_dataset\\test\\test",
+  "device": "cuda",
+  "images": 33,
+  "elapsed_seconds": 0.292,
+  "images_per_second": 112.857,
+  "labeled": false,
+  "correct": 33,
+  "labeled_images": 33,
+  "accuracy": 1.0
+}
