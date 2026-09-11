@@ -1,128 +1,113 @@
 """Task 3: Data Labeling and Dataset Organization
 
-Run:
-    python course/03_data_labeling_and_dataset_organization.py --dataset path/to/dataset
+Change DATASET_PATH below to the folder that contains:
 
-Expected dataset structure:
-    dataset/
-        healthy/
-        chlorosis/
-        necrosis/
+healthy/
+chlorosis/
+necrosis/
 
-For image classification, the folder name is the class label.
-This script assigns numeric labels and creates reproducible train/validation/test CSV files.
+Running this file creates train.csv, val.csv, and test.csv.
 """
 
 from pathlib import Path
-import argparse
 import csv
 import random
 
 
+# -----------------------------------------------------------------------------
+# 1. Settings
+# -----------------------------------------------------------------------------
+DATASET_PATH = Path("dataset")
+OUTPUT_PATH = Path("course/artifacts/splits")
+
 CLASS_NAMES = ["healthy", "chlorosis", "necrosis"]
-CLASS_TO_INDEX = {name: index for index, name in enumerate(CLASS_NAMES)}
+CLASS_TO_INDEX = {
+    "healthy": 0,
+    "chlorosis": 1,
+    "necrosis": 2,
+}
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 RANDOM_SEED = 42
-TRAIN_RATIO = 0.75
-VAL_RATIO = 0.10
 
 
-def collect_labeled_images(dataset_path: Path):
-    records = []
+# -----------------------------------------------------------------------------
+# 2. Read images and assign labels from folder names
+# -----------------------------------------------------------------------------
+all_data = []
 
-    for class_name in CLASS_NAMES:
-        class_folder = dataset_path / class_name
-        if not class_folder.is_dir():
-            raise FileNotFoundError(f"Missing class folder: {class_folder}")
+for class_name in CLASS_NAMES:
+    class_folder = DATASET_PATH / class_name
+    class_label = CLASS_TO_INDEX[class_name]
 
-        label = CLASS_TO_INDEX[class_name]
-        image_paths = sorted(
-            path for path in class_folder.iterdir()
-            if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
-        )
-
-        for image_path in image_paths:
-            records.append({
+    for image_path in class_folder.iterdir():
+        if image_path.is_file() and image_path.suffix.lower() in IMAGE_EXTENSIONS:
+            all_data.append({
                 "image_path": str(image_path.resolve()),
                 "class_name": class_name,
-                "label": label,
+                "label": class_label,
             })
 
-    if not records:
-        raise RuntimeError("No supported images were found in the dataset.")
 
-    return records
+# -----------------------------------------------------------------------------
+# 3. Create train, validation, and test splits
+#    75% training, 10% validation, 15% testing
+# -----------------------------------------------------------------------------
+random.seed(RANDOM_SEED)
 
+train_data = []
+val_data = []
+test_data = []
 
-def create_stratified_splits(records):
-    """Split each class separately so every split contains all classes."""
-    rng = random.Random(RANDOM_SEED)
-    train_records, val_records, test_records = [], [], []
+for class_name in CLASS_NAMES:
+    class_data = [item for item in all_data if item["class_name"] == class_name]
+    random.shuffle(class_data)
 
-    for class_name in CLASS_NAMES:
-        class_records = [r.copy() for r in records if r["class_name"] == class_name]
-        rng.shuffle(class_records)
+    total = len(class_data)
+    train_end = int(total * 0.75)
+    val_end = train_end + int(total * 0.10)
 
-        n = len(class_records)
-        train_end = int(n * TRAIN_RATIO)
-        val_end = train_end + int(n * VAL_RATIO)
-
-        train_records.extend(class_records[:train_end])
-        val_records.extend(class_records[train_end:val_end])
-        test_records.extend(class_records[val_end:])
-
-    rng.shuffle(train_records)
-    rng.shuffle(val_records)
-    rng.shuffle(test_records)
-    return train_records, val_records, test_records
+    train_data.extend(class_data[:train_end])
+    val_data.extend(class_data[train_end:val_end])
+    test_data.extend(class_data[val_end:])
 
 
-def save_manifest(records, output_path: Path):
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", newline="", encoding="utf-8") as file:
+# -----------------------------------------------------------------------------
+# 4. Save the splits as CSV files
+# -----------------------------------------------------------------------------
+OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+
+for file_name, data in [
+    ("train.csv", train_data),
+    ("val.csv", val_data),
+    ("test.csv", test_data),
+]:
+    with open(OUTPUT_PATH / file_name, "w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=["image_path", "class_name", "label"])
         writer.writeheader()
-        writer.writerows(records)
+        writer.writerows(data)
 
 
-def print_summary(name, records):
-    print(f"\n{name}")
-    print("-" * len(name))
-    for class_name in CLASS_NAMES:
-        count = sum(r["class_name"] == class_name for r in records)
-        print(f"{class_name:10s}: {count}")
-    print(f"Total      : {len(records)}")
+# -----------------------------------------------------------------------------
+# 5. Show the result
+# -----------------------------------------------------------------------------
+print("Class mapping:")
+for class_name, label in CLASS_TO_INDEX.items():
+    print(class_name, "->", label)
 
+print("\nDataset split:")
+print("Training images:", len(train_data))
+print("Validation images:", len(val_data))
+print("Testing images:", len(test_data))
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=Path, required=True, help="Path to cleaned dataset")
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("course/artifacts/splits"),
-        help="Folder where split CSV files will be saved",
+for class_name in CLASS_NAMES:
+    train_count = sum(item["class_name"] == class_name for item in train_data)
+    val_count = sum(item["class_name"] == class_name for item in val_data)
+    test_count = sum(item["class_name"] == class_name for item in test_data)
+
+    print(
+        f"{class_name}: "
+        f"train={train_count}, val={val_count}, test={test_count}"
     )
-    args = parser.parse_args()
 
-    records = collect_labeled_images(args.dataset)
-    train_records, val_records, test_records = create_stratified_splits(records)
-
-    save_manifest(train_records, args.output / "train.csv")
-    save_manifest(val_records, args.output / "val.csv")
-    save_manifest(test_records, args.output / "test.csv")
-
-    print("Class label mapping")
-    print("-------------------")
-    for class_name, class_index in CLASS_TO_INDEX.items():
-        print(f"{class_name:10s} -> {class_index}")
-
-    print_summary("Training set", train_records)
-    print_summary("Validation set", val_records)
-    print_summary("Test set", test_records)
-
-    print(f"\nSaved split files to: {args.output.resolve()}")
-
-
-if __name__ == "__main__":
-    main()
+print("\nSaved split files in:", OUTPUT_PATH)
