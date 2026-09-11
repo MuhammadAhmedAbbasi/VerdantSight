@@ -3,8 +3,14 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+import sys
+from pathlib import Path
 
-from src.app import app as app_module
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.app import adpp as app_module
 
 
 logging.basicConfig(level=logging.INFO,
