@@ -2,8 +2,6 @@
 
 This folder separates the VerdantSight leaf-health classification workflow into the exact course tasks.
 
-Each coded task is self-contained. Students can open and run the relevant task file without importing code from another course file.
-
 ## Dataset structure
 
 Use a dataset with this structure:
@@ -15,79 +13,71 @@ dataset/
 └── necrosis/
 ```
 
-Supported image formats are JPG, JPEG, PNG, BMP, and WEBP.
+Supported image formats include JPG, JPEG, PNG, BMP, and WEBP.
 
 ## Tasks
 
 1. `01_problem_definition_and_computer_vision_system_design.md` — theory only.
-2. `02_data_collection_cleaning_and_preparation.md` — theory only; documents offline/manual collection and cleaning.
-3. `03_data_labeling_and_dataset_organization.py` — assigns labels from folders and creates reproducible train/validation/test split files.
-4. `04_evaluation_strategy_and_performance_metrics.md` — theory only; explains accuracy, precision, recall, F1-score, confusion matrix, and evaluation strategy.
-5. `05_computer_vision_model_selection_and_baseline_training.py` — self-contained baseline ResNet9 training experiment.
-6. `06_model_optimization_and_generalization.py` — self-contained optimized ResNet9 training experiment.
-7. `07_model_export_and_inference_service_development.py` — self-contained model export and inference example.
-8. `08_prediction_output_and_response_structure_design.py` — self-contained prediction-to-JSON response example.
+2. `02_data_collection_cleaning_and_preparation.md` — theory only.
+3. `03_data_labeling_and_dataset_organization.py` — labels images from folders and creates train/validation/test CSV files.
+4. `04_evaluation_strategy_and_performance_metrics.md` — theory only.
+5. `05_computer_vision_model_selection_and_baseline_training.py` — trains the baseline ResNet9 model.
+6. `06_model_optimization_and_generalization.py` — trains the improved model using augmentation, class balancing, better learning settings, and best-model saving.
+7. `07_model_export_and_inference_service_development.py` — exports the optimized model and runs inference on one new image.
+8. `08_prediction_output_and_response_structure_design.py` — converts the prediction into a structured JSON response.
+
+Each Python file is self-contained so students can study and run that task independently.
 
 ## Installation
 
 ```bash
-pip install -r course/requirements.txt
+pip install torch torchvision pillow scikit-learn
 ```
 
-## Run order
+## How to run
 
-Task 3:
+Open each Python file and change the path variables near the top when needed.
+
+For example:
+
+```python
+DATASET_PATH = Path("dataset")
+```
+
+or:
+
+```python
+TEST_IMAGE_PATH = Path("test_leaf.jpg")
+```
+
+Then run the file normally:
 
 ```bash
-python course/03_data_labeling_and_dataset_organization.py --dataset path/to/dataset
+python course/03_data_labeling_and_dataset_organization.py
+python course/05_computer_vision_model_selection_and_baseline_training.py
+python course/06_model_optimization_and_generalization.py
+python course/07_model_export_and_inference_service_development.py
+python course/08_prediction_output_and_response_structure_design.py
 ```
 
-Task 4 is theory only and does not require execution.
+Task 4 is theory only, so there is no Python file to run for it.
 
-Task 5:
+## Baseline and optimized model
 
-```bash
-python course/05_computer_vision_model_selection_and_baseline_training.py --dataset path/to/dataset
-```
-
-Task 6:
-
-```bash
-python course/06_model_optimization_and_generalization.py --dataset path/to/dataset
-```
-
-Task 7:
-
-```bash
-python course/07_model_export_and_inference_service_development.py --image path/to/test_leaf.jpg
-```
-
-Task 8:
-
-```bash
-python course/08_prediction_output_and_response_structure_design.py --image path/to/test_leaf.jpg
-```
-
-Generated models and outputs are stored under `course/artifacts/`.
-
-## Baseline versus optimized model
-
-Task 5 intentionally uses a weaker but valid training configuration:
+Task 5 is intentionally kept simple:
 
 - no data augmentation;
-- no class-balanced sampling;
-- only 5 epochs;
-- Adam learning rate of `0.01`;
-- final epoch is saved instead of selecting the best validation checkpoint.
+- no class-balanced sampler;
+- higher learning rate;
+- fewer epochs;
+- final model is saved directly.
 
-Task 6 introduces the improved configuration:
+Task 6 improves the training process using:
 
-- random horizontal flipping;
-- random rotation;
-- color jitter;
+- image augmentation;
 - `WeightedRandomSampler` for class imbalance;
-- Adam learning rate of `0.001`;
-- 20 epochs;
+- learning rate `0.001`;
+- more training epochs;
 - best validation checkpoint selection.
 
-This gives the course a clear experimental sequence: build a baseline, observe its limitations, improve the training strategy, then export and use the optimized model.
+This gives students a clear sequence from a basic baseline model to a better generalized model.
